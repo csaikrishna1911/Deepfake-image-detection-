@@ -1,0 +1,34 @@
+# Virtual Environments (Python)
+venv/
+.venv/
+venv_gpu/
+env/
+ENV/
+
+# Node.js dependencies
+node_modules/
+frontend/node_modules/
+
+# Python cache & runtime logs
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local databases and instances
+instance/
+*.db
+
+# Uploads directory (keep folder structure but ignore uploaded files)
+uploads/*
+!uploads/.gitkeep
+
+# IDE and OS configurations
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Large model files
+*.onnx

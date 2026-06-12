@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detection System PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Dependencies for Client-Side ML -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+    <!-- Dependencies for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="dark-mode">
+
+<div class="app-container">
+    <!-- Hamburger Button (Mobile Only) -->
+    <button id="hamburgerBtn" class="hamburger-btn" aria-label="Toggle Navigation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <button id="closeSidebarBtn" class="close-sidebar-btn">×</button>
+        <div class="logo-area">
+            <span class="logo-icon">💠</span>
+            <div class="logo-text">
+                <strong style="font-family: 'Outfit', sans-serif;">DEEPFAKE</strong>
+                <span>DETECTION SYSTEM</span>
+            </div>
+        </div>
+        
+        <nav class="nav-menu" id="navMenu">
+            <a href="#" class="nav-item" data-target="dashboard-view">Dashboard</a>
+            <a href="#" class="nav-item active" data-target="upload-view">Upload & Analyze</a>
+            <a href="#" class="nav-item" data-target="history-view">Detection History</a>
+            <a href="#" class="nav-item" data-target="settings-view">Settings</a>
+            <a href="#" class="nav-item" data-target="compare-view">Comparison Mode</a>
+        </nav>
+        
+        <div class="sidebar-bottom">
+            <div class="theme-toggle-container">
+                <span>Theme:</span>
+                <label class="switch">
+                    <input type="checkbox" id="themeToggle" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <a href="#" class="nav-item">Admin Panel</a>
+            <a href="#" class="nav-item">Logout</a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <h1 id="pageTitle" style="font-family: 'Outfit', sans-serif;">MEDIA UPLOAD & ANALYSIS</h1>
+                <p id="pageSubtitle">Advanced Local Browser Inference</p>
+            </div>
+            <div class="header-right">
+                <div class="model-selector-wrapper">
+                    <label>Mode:</label>
+                    <select id="scanModeSelect" class="fancy-select">
+                        <option value="fast">Fast Scan</option>
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="deep">Deep Analysis</option>
+                    </select>
+                </div>
+                <span class="classification">Classification: <strong>CONFIDENTIAL</strong></span>
+            </div>
+        </header>
+
+        <!-- VIEW WRAPPER -->
+        <div class="views-wrapper">
+
+            <!-- ================= DASHBOARD VIEW ================= -->
+            <div id="dashboard-view" class="view-panel">
+                <div class="panel health-panel">
+                    <div class="panel-header">
+                        <h2>SYSTEM HEALTH & ANALYTICS</h2>
+                    </div>
+                    <div class="dashboard-metrics" id="dashboardMetrics">
+                        <div class="metric">
+                            <p class="label">Total Analyses</p>
+                            <p class="value" id="dashTotal">—</p>
+                        </div>
+                        <div class="metric">
+                            <p class="label">Fake Detected</p>
+                            <p class="value" id="dashFake">—</p>
+                            <p class="subtext" id="dashFakeSub"></p>
+                        </div>
+                        <div class="metric">
+                            <p class="label">Real Verified</p>
+                            <p class="value" id="dashReal">—</p>
+                            <p class="subtext" id="dashRealSub"></p>
+                        </div>
+                        <div class="metric">
+                            <p class="label">Avg Confidence</p>
+                            <p class="value" id="dashConf">—</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="panel mt-15">
+                    <div class="panel-header">
+                        <h2>RECENT ACTIVITY</h2>
+                    </div>
+                    <div id="recentActivityList" class="recent-list">
+                        <!-- Loaded via JS -->
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <h3>No data available</h3>
+                            <p>Run your first analysis to see statistics here</p>
+                            <button class="action-btn primary mt-10 nav-link-btn" data-target="upload-view">Start Analysis</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= UPLOAD & ANALYZE VIEW ================= -->
+            <div id="upload-view" class="view-panel active">
+                <div class="dashboard-grid">
+                    
+                    <!-- Upload Zone -->
+                    <div class="panel upload-zone-panel">
+                        <div class="panel-header">
+                            <h2>UPLOAD ZONE</h2>
+                            <span class="badge" id="batchCountBadge">0 FILES</span>
+                        </div>
+                        
+                        <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                            <div class="upload-icon">📤</div>
+                            <h3>Drag-and-Drop or Browse</h3>
+                            <p>Select Multiple Files for Batch Upload</p>
+                            <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:5px;">Supported: JPG, PNG, MP4, AVI, MOV</p>
+                            <input type="file" id="fileInput" accept="image/*,video/mp4,video/avi,video/quicktime" multiple hidden>
+                        </div>
+        
+                        <div class="media-types">
+                            <button class="media-type-box action-btn" id="webcamBtn">
+                                <span class="icon">📷</span>
+                                <strong>WEBCAM CAPTURE</strong>
+                            </button>
+                            <div class="url-ingestion">
+                                <input type="text" id="urlInput" placeholder="Paste Public Image/Video URL here...">
+                                <button class="action-btn" id="urlGoBtn">Go</button>
+                            </div>
+                        </div>
+
+                        <!-- Batch Upload List -->
+                        <div class="batch-list-container" id="batchList" style="display:none;">
+                            <h4>Batch Queue</h4>
+                            <div class="batch-items" id="batchItems"></div>
+                        </div>
+                    </div>
+        
+                    <!-- Analysis Pipeline -->
+                    <div class="panel pipeline-panel">
+                        <div class="panel-header">
+                            <h2>ANALYSIS PIPELINE</h2>
+                        </div>
+                        
+                        <div class="pipeline-steps">
+                            <div class="step" id="step1">
+                                <div class="step-icon">1</div>
+                                <div class="step-text">FILE VALIDATION</div>
+                                <div class="step-status">Waiting</div>
+                            </div>
+                            <div class="step" id="step2">
+                                <div class="step-icon">2</div>
+                                <div class="step-text" id="stepText2">FACE DETECTION</div>
+                                <div class="step-status">Waiting</div>
+                            </div>
+                            <div class="step" id="step3">
+                                <div class="step-icon">3</div>
+                                <div class="step-text" id="stepText3">DEEPFAKE SCAN</div>
+                                <div class="step-status">Waiting</div>
+                            </div>
+                            <div class="step" id="step4">
+                                <div class="step-icon">4</div>
+                                <div class="step-text">RESULTS & REPORT</div>
+                                <div class="step-status">Waiting</div>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <!-- Latest Result Preview -->
+                    <div class="panel result-panel" id="latestResultPanel">
+                        <div class="panel-header">
+                            <h2>LATEST RESULT</h2>
+                            <div class="grad-cam-toggle">
+                                <span>Heatmap Overlay</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="heatmapToggle">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="result-content" id="exportArea">
+                            <div class="media-info-bar">
+                                <span class="media-id" id="mediaIdText">—</span>
+                                <span class="media-size" id="mediaSizeText"></span>
+                            </div>
+                            <div class="main-preview-container">
+                                <!-- Base Image/Video -->
+                                <img id="mainPreview" src="" alt="Preview Image" style="display: none;">
+                                <video id="mainVideoPreview" style="display: none;" controls></video>
+                                <!-- Heatmap Overlay -->
+                                <canvas id="heatmapCanvas" style="display: none;"></canvas>
+                                <!-- Face Bounding Box Canvas for Drawing -->
+                                <canvas id="overlayCanvas" style="display: none;"></canvas>
+                                
+                                <div id="previewPlaceholder" class="preview-placeholder">
+                                    <div class="spinner" id="mainSpinner" style="display: none;"></div>
+                                    <span id="placeholderText">No Media Selected</span>
+                                    <p id="processMessage" style="font-size:0.75rem; color:var(--accent-cyan); display:none;"></p>
+                                </div>
+                            </div>
+                            
+                            <!-- Detailed Breakdown (Inside PDF Export Area) -->
+                            <div class="detailed-analysis-grid hidden" id="detailedAnalysisGrid">
+                                <h4>Deep Analysis Breakdown</h4>
+                                <div class="detail-row">
+                                    <span>Facial Landmarks & AI</span>
+                                    <div class="mini-bar"><div class="fill" id="score-landmarks"></div></div>
+                                </div>
+                                <div class="detail-row">
+                                    <span>ELA / Noise Patterns</span>
+                                    <div class="mini-bar"><div class="fill" id="score-noise"></div></div>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Compression Artifacts</span>
+                                    <div class="mini-bar"><div class="fill" id="score-compression"></div></div>
+                                </div>
+                                <div class="detail-row">
+                                    <span>GAN Fingerprints</span>
+                                    <div class="mini-bar"><div class="fill" id="score-gan"></div></div>
+                                </div>
+                            </div>
+
+                            <div class="ai-explanation-panel hidden" id="aiExplanation">
+                                <strong>AI Explanation:</strong> <span id="explainText"></span>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <!-- Dual Probability & Verdict -->
+                    <div class="panel gauge-panel">
+                        <div class="panel-header">
+                            <h2>CONFIDENCE METRICS</h2>
+                            <div class="trust-badge" id="trustBadge">Trust: —/100</div>
+                        </div>
+                        <div class="gauge-content">
+                            <!-- Dual Probability -->
+                            <div class="dual-prob">
+                                <div class="prob-row">
+                                    <div class="prob-label">🟢 Real Authenticity</div>
+                                    <div class="prob-val" id="valReal">0%</div>
+                                </div>
+                                <div class="prob-bar-container">
+                                    <div class="prob-bar real-bar" id="barReal" style="width: 0%"></div>
+                                    <div class="prob-bar fake-bar" id="barFake" style="width: 0%"></div>
+                                </div>
+                                <div class="prob-row">
+                                    <div class="prob-label">🔴 Fake / Manipulated</div>
+                                    <div class="prob-val" id="valFake">0%</div>
+                                </div>
+                                
+                                <div class="confidence-warning none" id="confWarning"></div>
+                            </div>
+        
+                            <div class="gauge-right">
+                                <h3>VERDICT</h3>
+                                <div class="verdict-box" id="verdictBox">
+                                    AWAITING UPLOAD
+                                </div>
+                                <div class="action-buttons">
+                                    <button class="action-btn" id="btnExportPDF" disabled>📥 PDF Report</button>
+                                    <button class="action-btn" id="btnExportJSON" disabled>📄 JSON Export</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Dashboard Grid -->
+            </div>
+
+            <!-- ================= HISTORY VIEW ================= -->
+            <div id="history-view" class="view-panel">
+                <div class="panel history-panel">
+                    <div class="panel-header">
+                        <h2>DETECTION HISTORY</h2>
+                        <div class="history-actions">
+                            <select id="historyFilter" class="fancy-select">
+                                <option value="all">All Entries</option>
+                                <option value="fake">Fake Only</option>
+                                <option value="real">Real Only</option>
+                                <option value="uncertain">Uncertain</option>
+                            </select>
+                            <button class="action-btn warn" id="clearHistoryBtn">Clear All</button>
+                        </div>
+                    </div>
+                    
+                    <div class="history-table-container">
+                        <table class="history-table" id="historyTable" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th width="50">#</th>
+                                    <th>Filename</th>
+                                    <th>Type</th>
+                                    <th>Verdict</th>
+                                    <th>Confidence</th>
+                                    <th>Date & Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTbody">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- Empty History State -->
+                        <div id="historyEmptyState" class="empty-state">
+                            <div class="empty-icon">🛡️</div>
+                            <h3>No detections yet</h3>
+                            <p>Upload an image or video on the Upload & Analyze page to get started.</p>
+                            <button class="action-btn primary mt-10 nav-link-btn" data-target="upload-view">Go to Upload</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= SETTINGS VIEW ================= -->
+            <div id="settings-view" class="view-panel">
+                <div class="panel settings-panel">
+                    <div class="panel-header">
+                        <h2>SETTINGS & PREFERENCES</h2>
+                    </div>
+                    <div class="settings-content">
+                        <div class="setting-group">
+                            <h4>API Configuration</h4>
+                            <div class="setting-row">
+                                <label>Backend URL</label>
+                                <input type="text" id="settingApiUrl" class="fancy-input" value="http://localhost:5000">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h4>Thresholds</h4>
+                            <div class="setting-row">
+                                <label>Strict Fake Confidence Threshold (%)</label>
+                                <input type="number" class="fancy-input" value="65">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h4>Data & Storage</h4>
+                            <div class="setting-row">
+                                <label>Keep History for (Days)</label>
+                                <input type="number" class="fancy-input" value="30">
+                            </div>
+                        </div>
+                        <button class="action-btn primary mt-15" id="saveSettingsBtn">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= COMPARE VIEW ================= -->
+            <div id="compare-view" class="view-panel">
+                <div class="panel compare-panel">
+                    <div class="panel-header">
+                        <h2>COMPARISON MODE</h2>
+                        <span class="badge">A/B TEST</span>
+                    </div>
+
+                    <div id="compareEmptyState" class="empty-state" style="margin-bottom: 20px;">
+                        <div class="empty-icon">⚖️</div>
+                        <h3>Compare Two Files</h3>
+                        <p>Upload two files to compare them side-by-side.</p>
+                    </div>
+                    
+                    <div class="compare-grid">
+                        <!-- Column A -->
+                        <div class="compare-card">
+                            <h3>Original / Reference (Image A)</h3>
+                            <input type="file" id="compAFile" accept="image/*,video/*" hidden>
+                            <div class="upload-area small-drop" id="compADrop" onclick="document.getElementById('compAFile').click()">
+                                <div class="upload-icon">📤</div>
+                                <p>Select File A</p>
+                            </div>
+                            <div class="preview-wrap">
+                                <img id="compAImg" src="" style="display:none; width: 100%; border-radius: 8px; margin-top: 10px;">
+                                <video id="compAVideo" style="display:none; width: 100%; border-radius: 8px; margin-top: 10px;" controls></video>
+                            </div>
+                            <div class="comp-res" id="compARes"></div>
+                        </div>
+                        
+                        <!-- Column B -->
+                        <div class="compare-card">
+                            <h3>Suspected Fake (Image B)</h3>
+                            <input type="file" id="compBFile" accept="image/*,video/*" hidden>
+                            <div class="upload-area small-drop" id="compBDrop" onclick="document.getElementById('compBFile').click()">
+                                <div class="upload-icon">📤</div>
+                                <p>Select File B</p>
+                            </div>
+                            <div class="preview-wrap">
+                                <img id="compBImg" src="" style="display:none; width: 100%; border-radius: 8px; margin-top: 10px;">
+                                <video id="compBVideo" style="display:none; width: 100%; border-radius: 8px; margin-top: 10px;" controls></video>
+                            </div>
+                            <div class="comp-res" id="compBRes"></div>
+                        </div>
+                    </div>
+
+                    <div id="compareResultArea" class="compare-result-area" style="display:none;">
+                        <h3>Difference Summary</h3>
+                        <div class="compare-summary-box">
+                            <p id="compareSummaryText">Analyzing differences...</p>
+                        </div>
+                        <div class="compare-winner">
+                            <strong>Winning Verdict: </strong> <span id="compareWinnerBadge" class="badge-verdict"></span>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px; display: flex; gap:10px; justify-content: center;">
+                        <button class="action-btn primary" id="btnCompare">Compare Both</button>
+                        <button class="action-btn" id="btnResetCompare">Reset</button>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End Views Wrapper -->
+
+        <!-- Details Modal -->
+        <div id="detailsModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Detailed Analysis Report</h3>
+                <div id="modalDetailsContent" style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;"></div>
+                <div class="modal-actions mt-15">
+                    <button class="action-btn" id="btnCloseDetails">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Webcam Modal -->
+        <div id="webcamModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <h3>Capture from Webcam</h3>
+                <video id="webcamVideo" autoplay playsinline></video>
+                <div class="modal-actions">
+                    <button class="action-btn primary" id="btnCapture">📸 Capture & Analyze</button>
+                    <button class="action-btn" id="btnCloseWebcam">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

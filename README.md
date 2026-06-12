@@ -1,6 +1,6 @@
 # DeepShield — Deepfake Detection System
 
-AI-powered web platform to detect deepfakes in images, videos, and audio.
+AI-powered web platform to detect deepfakes in images
 
 ---
 
